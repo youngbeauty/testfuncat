@@ -47,6 +47,8 @@ apps:
           root_path: apps/chat-api
           runtime:
             type: nodejs18x
+            configs:
+              - startCommand : node server.js 
           vars:
             - BAIDU_API_KEY
             - BAIDU_SECRET_KEY
@@ -58,6 +60,8 @@ apps:
           root_path: apps/chat-api
           runtime:
             type: nodejs18x
+            configs:
+              - startCommand : node server.js 
           vars:
             - BAIDU_API_KEY
             - BAIDU_SECRET_KEY
