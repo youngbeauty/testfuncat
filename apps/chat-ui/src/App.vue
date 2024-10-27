@@ -1,36 +1,43 @@
 <template>
-  <div class="flex h-screen">
-    <!-- Left Column (Empty) -->
-    <div class="w-1/5 bg-gray-100 p-4"></div>
+  <div class="flex flex-col h-screen bg-gray-100">
+    <!-- Header with Configuration -->
+    <div class="bg-blue-600 p-4 flex items-center justify-between text-white shadow-md">
+      <h2 class="text-xl font-bold">模型选择</h2>
+      <select v-model="model" class="select p-2 rounded bg-white text-black shadow-sm">
+        <option v-for="(modelOption, index) in modelOptions" :key="index" :value="modelOption.value">
+          {{ modelOption.label }}
+        </option>
+      </select>
+    </div>
 
     <!-- Center Column (Chat) -->
-    <div class="flex flex-col w-3/5 bg-black text-white p-4">
+    <div class="flex-grow flex flex-col w-full bg-gray-900 text-white p-4 overflow-auto">
       <div class="flex-grow overflow-y-auto mb-4">
-        <ul>
-          <li v-for="(conv, index) in conversations" :key="index" class="mb-2">
-            <strong>用户:</strong> {{ conv.user }}<br/>
+        <ul class="space-y-4">
+          <li v-for="(conv, index) in conversations" :key="index" class="bg-gray-800 p-3 rounded shadow-sm">
+            <strong>用户:</strong> {{ conv.user }}<br />
             <strong>AI:</strong> {{ conv.ai }}
           </li>
         </ul>
       </div>
-      <div class="flex items-center mt-auto">
-        <textarea v-model="message" placeholder="输入您的消息" class="input flex-grow mr-2 p-2 rounded bg-gray-800 text-white resize-none"></textarea>
-        <button 
-          @click="sendMessage"
-          :disabled="!message || !model || loading"
-          class="button bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
-        >
-          {{ loading ? '发送中...' : '发送' }}
-        </button>
-      </div>
     </div>
 
-    <!-- Right Column (Configuration) -->
-    <div class="w-1/5 bg-gray-200 p-4">
-      <h2 class="text-lg font-bold mb-4">配置V1</h2>
-      <select v-model="model" class="select w-full mb-4 p-2 rounded bg-white text-black">
-        <option v-for="(model, index) in modelOptions" :key="index" :value="model.value">{{ model.label }}</option>
-      </select>
+    <!-- Footer with Input -->
+    <div class="bg-gray-200 flex items-center p-4 shadow-inner">
+      <textarea
+        v-model="message"
+        placeholder="输入您的消息"
+        class="flex-grow mr-2 p-2 rounded bg-white text-black resize-none border border-gray-300 focus:outline-none focus:ring focus:border-blue-300"
+        @keyup.enter="sendMessage"
+        rows="1"
+      ></textarea>
+      <button
+        @click="sendMessage"
+        :disabled="!message || !model || loading"
+        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow disabled:opacity-50"
+      >
+        {{ loading ? '发送中...' : '发送' }}
+      </button>
     </div>
   </div>
 </template>
@@ -42,12 +49,10 @@ export default {
   data() {
     return {
       message: '',
-      model: '', // Default model
+      model: null, // Ensure this is null or an invalid value initially
       models: [
         { provider: 'baidu', name: 'ernie-4.0-8k-latest' },
-        { provider: 'baidu', name: 'ernie-3.0' },
-        { provider: 'alicloud', name: 'qianyi-tongwen-v1' },
-        { provider: 'alicloud', name: 'qianyi-tongwen-v2' }
+        { provider: 'baidu', name: 'ernie-3.0' }
       ],
       conversations: [],
       loading: false // Loading state for send button
@@ -55,7 +60,7 @@ export default {
   },
   computed: {
     modelOptions() {
-      return this.models.map(model => ({
+      return this.models.map((model) => ({
         value: model,
         label: `${model.name} (${model.provider})`
       }));
@@ -64,7 +69,8 @@ export default {
   methods: {
     async sendMessage() {
       console.log('sendMessage called');
-      
+
+      // Check if message and model are valid
       if (!this.message || !this.model) {
         console.log('Message or model is empty');
         return;
@@ -99,7 +105,7 @@ export default {
   created() {
     // Automatically select the first model when the component is created
     if (this.models.length > 0) {
-      this.model = this.models[0];
+      this.model = this.models[0]; // Ensure this correctly sets the model
     }
   }
 };
