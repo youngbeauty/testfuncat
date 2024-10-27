@@ -45,10 +45,9 @@ apps:
           command: npm install
         provision:
           root_path: apps/chat-api
+          startCommand : node server.js 
           runtime:
             type: nodejs18x
-            configs:
-              - startCommand : node server.js 
           vars:
             - BAIDU_API_KEY
             - BAIDU_SECRET_KEY
@@ -58,10 +57,9 @@ apps:
           command: npm install
         provision:
           root_path: apps/chat-api
+          startCommand : node server.js 
           runtime:
             type: nodejs18x
-            configs:
-              - startCommand : node server.js 
           vars:
             - BAIDU_API_KEY
             - BAIDU_SECRET_KEY
