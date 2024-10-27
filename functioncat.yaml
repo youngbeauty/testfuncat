@@ -1,0 +1,63 @@
+opensystem: v1.0.0
+info:
+  name: ai chat tool
+  vars:
+    BAIDU_API_KEY:
+      default: ''
+      description: 百度千帆ModelBuilder>应用接入>应用API Key,  https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application/v1
+    BAIDU_SECRET_KEY:
+      default: ''
+      description: T百度千帆ModelBuilder>应用接入>Secret Key,  https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application/v1
+envs:
+  dev:
+    branch: dev
+  prod:
+    branch: main
+routes:
+  main_env: main
+  main_app: chatui
+apps:
+  chatui:
+    type: web_frontend
+    envs:
+      dev:
+        build:
+          root_path: apps/chat-ui
+          command: npm install; npm run build
+        provision:
+          root_path: apps/chat-ui/dist
+          runtime:
+            type: nodejs18x
+      prod:
+        build:
+          root_path: apps/chat-ui
+          command: npm install; npm run build
+        provision:
+          root_path: apps/chat-ui/dist
+          runtime:
+            type: nodejs18x
+  chatapi:
+    type: web_api
+    envs:
+      dev:
+        build:
+          root_path: apps/chat-api
+          command: npm install
+        provision:
+          root_path: apps/chat-api
+          runtime:
+            type: nodejs18x
+          vars:
+            - BAIDU_API_KEY
+            - BAIDU_SECRET_KEY
+      prod:
+        build:
+          root_path: apps/chat-api
+          command: npm install
+        provision:
+          root_path: apps/chat-api
+          runtime:
+            type: nodejs18x
+          vars:
+            - BAIDU_API_KEY
+            - BAIDU_SECRET_KEY
