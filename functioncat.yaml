@@ -14,7 +14,7 @@ envs:
   prod:
     branch: main
 routes:
-  main_env: main
+  main_env: prod
   main_app: chatui
 apps:
   chatui:
