@@ -1,13 +1,21 @@
 <template>
   <div class="flex flex-col h-screen bg-gray-100">
     <!-- Header with Configuration -->
-    <div class="bg-blue-600 p-4 flex items-center justify-between text-white shadow-md">
-      <h2 class="text-xl font-bold">模型选择</h2>
-      <select v-model="model" class="select p-2 rounded bg-white text-black shadow-sm">
-        <option v-for="(modelOption, index) in modelOptions" :key="index" :value="modelOption.value">
-          {{ modelOption.label }}
-        </option>
-      </select>
+    <div class="bg-blue-600 p-1 flex items-center justify-between text-white shadow-md">
+      <button 
+        @click="deployAIChat"
+        class="bg-blue-700 hover:bg-blue-800 text-white font-bold p-1 rounded flex items-center"
+      >
+        部署我的AI Chat
+      </button>
+      <div>
+        <select id="model-select" v-model="model" class="select p-1 rounded bg-white text-black shadow-sm">
+          <option disabled selected>选择模型</option>
+          <option v-for="(modelOption, index) in modelOptions" :key="index" :value="modelOption.value">
+            {{ modelOption.label }}
+          </option>
+        </select>
+      </div>
     </div>
 
     <!-- Center Column (Chat) -->
@@ -67,6 +75,9 @@ export default {
     }
   },
   methods: {
+    deployAIChat() {
+      window.open('https://functioncat.cn/console/clone-system?sourceOrgSlug=template&sourceSystemSlug=aichat3', '_blank');
+    },
     async sendMessage() {
       console.log('sendMessage called');
 
