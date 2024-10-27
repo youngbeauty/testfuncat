@@ -45,7 +45,7 @@ apps:
           command: npm install
         provision:
           root_path: apps/chat-api
-          startCommand : node server.js 
+          startCommand: node server.js 
           runtime:
             type: nodejs18x
           vars:
@@ -57,7 +57,7 @@ apps:
           command: npm install
         provision:
           root_path: apps/chat-api
-          startCommand : node server.js 
+          startCommand: node server.js 
           runtime:
             type: nodejs18x
           vars:
