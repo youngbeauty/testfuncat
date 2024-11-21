@@ -1,13 +1,17 @@
-opensystem: v1.0.0
+system: 1.0.0
 info:
   name: ai chat tool
   vars:
     BAIDU_API_KEY:
-      default: ''
-      description: 百度千帆ModelBuilder>应用接入>应用API Key,  https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application/v1
+      description: >-
+        百度千帆ModelBuilder>应用接入>应用API Key, 
+        https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application/v1
     BAIDU_SECRET_KEY:
-      default: ''
-      description: T百度千帆ModelBuilder>应用接入>Secret Key,  https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application/v1
+      description: >-
+        T百度千帆ModelBuilder>应用接入>Secret Key, 
+        https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application/v1
+    STORE_SVC_API_KEY:
+      description: “Store 服务的API KEY。”
 envs:
   dev:
     branch: dev
@@ -16,6 +20,18 @@ envs:
 routes:
   main_env: prod
   main_app: chatui
+auths:
+  apikey:
+    type: api_key
+    envs:
+      dev:
+        in: header
+        name: API-KEY
+        value: ${{vars.STORE_SVC_API_KEY}
+      prod:
+        in: header
+        name: API-KEY
+        value: ${{vars.STORE_SVC_API_KEY}
 apps:
   chatui:
     type: web_frontend
@@ -23,47 +39,59 @@ apps:
       dev:
         build:
           root_path: apps/chat-ui
-          command: npm install; npm run build
+          script: npm install; npm run build
         provision:
           root_path: apps/chat-ui/dist
-          runtime:
-            type: nodejs18x
+          type: nodejs18x
       prod:
         build:
           root_path: apps/chat-ui
-          command: npm install; npm run build
+          script: npm install; npm run build
         provision:
           root_path: apps/chat-ui/dist
-          runtime:
-            type: nodejs18x
+          type: nodejs18x
   chatapi:
     type: web_api
     envs:
       dev:
         build:
           root_path: apps/chat-api
-          command: npm install
+          script: npm install
         provision:
+          type: nodejs18x
           root_path: apps/chat-api
-          start_command: node server.js 
-          runtime:
-            type: nodejs18x
-            configs:
-              start_command: node server.js
+          start_command: node server.js
           vars:
             - BAIDU_API_KEY
             - BAIDU_SECRET_KEY
+            - STORE_SVC_API_KEY
       prod:
         build:
           root_path: apps/chat-api
-          command: npm install
+          script: npm install
         provision:
+          type: nodejs18x
           root_path: apps/chat-api
-          start_command: node server.js 
-          runtime:
-            type: nodejs18x
-            configs:
-              start_command: node server.js
+          start_command: node server.js
           vars:
             - BAIDU_API_KEY
             - BAIDU_SECRET_KEY
+            - STORE_SVC_API_KEY
+services:
+  store:
+    type: kv_store
+    envs:
+      dev:
+        auths:
+          - apikey
+        provision:
+          type: kv_store_v1
+          namespaces:
+            - dailycounter
+      prod:
+        auths:
+          - apikey
+        provision:
+          type: kv_store_v1
+          namespaces:
+            - dailycounter

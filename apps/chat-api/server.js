@@ -1,5 +1,3 @@
-// apps/backend/server.js
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
@@ -13,6 +11,7 @@ const BAIDU_API_KEY = process.env.BAIDU_API_KEY;
 const BAIDU_SECRET_KEY = process.env.BAIDU_SECRET_KEY;
 const ALICLOUD_ACCESS_KEY_ID = process.env.ALICLOUD_ACCESS_KEY_ID;
 const ALICLOUD_ACCESS_KEY_SECRET = process.env.ALICLOUD_ACCESS_KEY_SECRET;
+const SYSTEM_URL = process.env.SYSTEM_URL;
 
 let baiduAccessToken = null;
 let baiduTokenExpiry = null;
@@ -30,7 +29,6 @@ async function getBaiduAccessToken() {
         client_secret: BAIDU_SECRET_KEY,
       },
     });
-    console.log("response", response)
     baiduAccessToken = response.data.access_token;
     baiduTokenExpiry = new Date(new Date().getTime() + response.data.expires_in * 1000);
   }
@@ -43,25 +41,68 @@ function getAlibabaSignature(params, secret) {
   const stringToSign = `POST&%2F&${encodeURIComponent(sortedParams)}`;
   return crypto.createHmac('sha1', `${secret}&`).update(stringToSign).digest('base64');
 }
-app.get('/', async (req, res) => {
-    const timestamp = new Date().toISOString(); // Get current time in ISO format
+// Function to get the current request count from the KV store
+async function getRequestCount() {
+  try {
+    const response = await axios.get(`${SYSTEM_URL}/svcs/store/namespaces/dailycounter/keys`, {
+      headers: {
+        'API-KEY': process.env.STORE_SVC_API_KEY
+      }
+    });
+    return response.data.value ? parseInt(response.data.value, 10) : 0;
+  } catch (error) {
+    console.error('Error fetching request count:', error);
+    return 0;
+  }
+}
 
-    return res.json({"message": "hello, I'm chat-api", "timestamp": timestamp})
-})
+// Function to update the request count in the KV store
+async function updateRequestCount(count) {
+  try {
+    await axios.post(`${SYSTEM_URL}/svcs/store/namespaces/dailycounter/keys`, 
+      { value: count.toString() }, 
+      {
+        headers: {
+          'API-KEY': process.env.STORE_SVC_API_KEY
+        }
+      });
+  } catch (error) {
+    console.error('Error updating request count:', error);
+  }
+}
+
+// Middleware to check and update request count
+async function rateLimitMiddleware(req, res, next) {
+  const currentCount = await getRequestCount();
+  const limit = 100;
+  const remaining = limit - currentCount;
+
+  if (remaining <= 0) {
+    return res.status(429).json({ message: 'Rate limit exceeded', remaining: 0, total: limit });
+  }
+
+  await updateRequestCount(currentCount + 1);
+  req.rateLimitInfo = { remaining: remaining - 1, total: limit };
+  next();
+}
+
+app.get('/', async (req, res) => {
+  const timestamp = new Date().toISOString();
+  return res.json({ "message": "hello, I'm chat-api", "timestamp": timestamp });
+});
 
 app.get('/v', async (req, res) => {
-    return res.json("v:1")
-})
-app.post('/chat', async (req, res) => {
+  return res.json("v:1");
+});
+
+app.post('/chat', rateLimitMiddleware, async (req, res) => {
   const { message, provider, model } = req.body;
 
   try {
     let ai_response;
 
     if (provider === 'baidu') {
-      // Use Baidu ERNIE API
       const accessToken = await getBaiduAccessToken();
-      
       const response = await axios.post(
         `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/${model}?access_token=${accessToken}`,
         {
@@ -79,7 +120,6 @@ app.post('/chat', async (req, res) => {
       ai_response = response.data.result;
 
     } else if (provider === 'alicloud') {
-      // Use Alibaba Cloud 千义通问 model family
       const params = {
         Action: 'GetResponse',
         Version: '2020-06-01',
@@ -108,7 +148,7 @@ app.post('/chat', async (req, res) => {
       return res.status(400).send('Invalid AI provider specified');
     }
 
-    res.json({ response: ai_response });
+    res.json({ response: ai_response, remaining: req.rateLimitInfo.remaining, total: req.rateLimitInfo.total });
 
   } catch (error) {
     console.error(error);
