@@ -65,6 +65,7 @@ async function getRequestCount(dateKey) {
 
 // Function to update the request count in the KV store
 async function updateRequestCount(dateKey, count) {
+  console.log("updateRequestCount", dateKey, count)
   try {
     await axios.post(`${SYSTEM_URL}/svcs/store/namespaces/dailycounter/keys`, 
       { key: dateKey, value: count.toString() },  // Include both key and value in the body
@@ -73,6 +74,7 @@ async function updateRequestCount(dateKey, count) {
           'API-KEY': STORE_SVC_API_KEY
         }
       });
+      console.log("updateRequestCount succeeded")
   } catch (error) {
     console.error('更新请求计数时出错:', error);
   }
@@ -84,6 +86,7 @@ async function rateLimitMiddleware(req, res, next) {
   const dateKey = `requests-${today}`; // Use date-specific key for daily tracking
 
   const currentCount = await getRequestCount(dateKey);
+  console.log("currentCount",dateKey, currentCount)
   const limit = 100;
   const remaining = limit - currentCount;
 
