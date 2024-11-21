@@ -61,6 +61,7 @@ apps:
           type: nodejs18x
           root_path: apps/chat-api
           start_command: node server.js
+          timeout: 120
           vars:
             - BAIDU_API_KEY
             - BAIDU_SECRET_KEY
@@ -73,6 +74,7 @@ apps:
           type: nodejs18x
           root_path: apps/chat-api
           start_command: node server.js
+          timeout: 120
           vars:
             - BAIDU_API_KEY
             - BAIDU_SECRET_KEY
