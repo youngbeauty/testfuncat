@@ -53,8 +53,13 @@ async function getRequestCount(dateKey) {
     });
     return response.data.value ? parseInt(response.data.value, 10) : 0;
   } catch (error) {
+    // Handle case where the key does not exist
+    if (error.response && error.response.status === 404) {
+      console.log(`Key ${dateKey} not found, initializing count to 0.`);
+      return 0; // Initialize count to 0 if key is not found
+    }
     console.error('获取请求计数时出错:', error);
-    return 0;
+    throw error; // Re-throw the error for other cases
   }
 }
 
