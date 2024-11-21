@@ -12,6 +12,7 @@ const BAIDU_SECRET_KEY = process.env.BAIDU_SECRET_KEY;
 const ALICLOUD_ACCESS_KEY_ID = process.env.ALICLOUD_ACCESS_KEY_ID;
 const ALICLOUD_ACCESS_KEY_SECRET = process.env.ALICLOUD_ACCESS_KEY_SECRET;
 const SYSTEM_URL = process.env.FUNCTIONCAT_SYSTEM_URL;
+const STORE_SVC_API_KEY = process.env.STORE_SVC_API_KEY;
 
 let baiduAccessToken = null;
 let baiduTokenExpiry = null;
@@ -41,58 +42,62 @@ function getAlibabaSignature(params, secret) {
   const stringToSign = `POST&%2F&${encodeURIComponent(sortedParams)}`;
   return crypto.createHmac('sha1', `${secret}&`).update(stringToSign).digest('base64');
 }
+
 // Function to get the current request count from the KV store
-async function getRequestCount() {
+async function getRequestCount(dateKey) {
   try {
-    const response = await axios.get(`${SYSTEM_URL}/svcs/store/namespaces/dailycounter/keys`, {
+    const response = await axios.get(`${SYSTEM_URL}/svcs/store/namespaces/dailycounter/keys/${dateKey}`, {
       headers: {
-        'API-KEY': process.env.STORE_SVC_API_KEY
+        'API-KEY': STORE_SVC_API_KEY
       }
     });
     return response.data.value ? parseInt(response.data.value, 10) : 0;
   } catch (error) {
-    console.error('Error fetching request count:', error);
+    console.error('获取请求计数时出错:', error);
     return 0;
   }
 }
 
 // Function to update the request count in the KV store
-async function updateRequestCount(count) {
+async function updateRequestCount(dateKey, count) {
   try {
     await axios.post(`${SYSTEM_URL}/svcs/store/namespaces/dailycounter/keys`, 
-      { value: count.toString() }, 
+      { key: dateKey, value: count.toString() },  // Include both key and value in the body
       {
         headers: {
-          'API-KEY': process.env.STORE_SVC_API_KEY
+          'API-KEY': STORE_SVC_API_KEY
         }
       });
   } catch (error) {
-    console.error('Error updating request count:', error);
+    console.error('更新请求计数时出错:', error);
   }
 }
 
 // Middleware to check and update request count
 async function rateLimitMiddleware(req, res, next) {
-  const currentCount = await getRequestCount();
+  const today = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+  const dateKey = `requests-${today}`; // Use date-specific key for daily tracking
+
+  const currentCount = await getRequestCount(dateKey);
   const limit = 100;
   const remaining = limit - currentCount;
 
   if (remaining <= 0) {
-    return res.status(429).json({ message: 'Rate limit exceeded', remaining: 0, total: limit });
+    return res.status(429).json({ message: '请求已超出每日限制', remaining: 0, total: limit });
   }
 
-  await updateRequestCount(currentCount + 1);
+  await updateRequestCount(dateKey, currentCount + 1);
   req.rateLimitInfo = { remaining: remaining - 1, total: limit };
   next();
 }
 
 app.get('/', async (req, res) => {
   const timestamp = new Date().toISOString();
-  return res.json({ "message": "hello, I'm chat-api", "timestamp": timestamp });
+  return res.json({ "message": "你好，我是chat-api", "timestamp": timestamp });
 });
 
 app.get('/v', async (req, res) => {
-  return res.json("v:1");
+  return res.json("版本: 1");
 });
 
 app.post('/chat', rateLimitMiddleware, async (req, res) => {
@@ -145,17 +150,17 @@ app.post('/chat', rateLimitMiddleware, async (req, res) => {
       ai_response = response.data.Response;
 
     } else {
-      return res.status(400).send('Invalid AI provider specified');
+      return res.status(400).send('指定的AI提供商无效');
     }
 
     res.json({ response: ai_response, remaining: req.rateLimitInfo.remaining, total: req.rateLimitInfo.total });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).send('Error communicating with AI provider');
+    console.error('与AI提供商通信时出错:', error);
+    res.status(500).send('与AI提供商通信时出错');
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`服务器正在端口 ${PORT} 上运行`);
 });
