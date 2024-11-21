@@ -11,7 +11,7 @@ const BAIDU_API_KEY = process.env.BAIDU_API_KEY;
 const BAIDU_SECRET_KEY = process.env.BAIDU_SECRET_KEY;
 const ALICLOUD_ACCESS_KEY_ID = process.env.ALICLOUD_ACCESS_KEY_ID;
 const ALICLOUD_ACCESS_KEY_SECRET = process.env.ALICLOUD_ACCESS_KEY_SECRET;
-const SYSTEM_URL = process.env.SYSTEM_URL;
+const SYSTEM_URL = process.env.FUNCTIONCAT_SYSTEM_URL;
 
 let baiduAccessToken = null;
 let baiduTokenExpiry = null;
