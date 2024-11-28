@@ -52,7 +52,7 @@ async function getRequestCount(dateKey) {
       }
     });
     console.log("getRequestCount", response);
-    return parseInt(response.data.value, 10);
+    return parseInt(response.data.data.value, 10);
   } catch (error) {
     // Handle case where the key does not exist
     if (error.response && error.response.status === 404) {
