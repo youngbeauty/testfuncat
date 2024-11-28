@@ -101,6 +101,7 @@ async function rateLimitMiddleware(req, res, next) {
 
 app.get('/', async (req, res) => {
   const timestamp = new Date().toISOString();
+  console.log("/ called", timestamp)
   return res.json({ "message": "你好，我是chat-api", "timestamp": timestamp });
 });
 
@@ -110,7 +111,8 @@ app.get('/v', async (req, res) => {
 
 app.post('/chat', rateLimitMiddleware, async (req, res) => {
   const { message, provider, model } = req.body;
-
+  console.log("chat message",message)
+  console.log("chat model",model)
   try {
     let ai_response;
 
