@@ -51,7 +51,8 @@ async function getRequestCount(dateKey) {
         'API-KEY': STORE_SVC_API_KEY
       }
     });
-    return response.data.value ? parseInt(response.data.value, 10) : 0;
+    console.log("getRequestCount", response);
+    return parseInt(response.data.value, 10);
   } catch (error) {
     // Handle case where the key does not exist
     if (error.response && error.response.status === 404) {
