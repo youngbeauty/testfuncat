@@ -15,6 +15,8 @@ info:
 envs:
   dev:
     branch: dev
+  uat:
+    branch: dev
   prod:
     branch: main
 routes:
@@ -25,6 +27,10 @@ auths:
     type: api_key
     envs:
       dev:
+        in: header
+        name: API-KEY
+        value: ${{vars.STORE_SVC_API_KEY}}
+      uat:
         in: header
         name: API-KEY
         value: ${{vars.STORE_SVC_API_KEY}}
@@ -43,6 +49,13 @@ apps:
         provision:
           root_path: apps/chat-ui/dist
           type: nodejs18x
+      uat:
+        build:
+          root_path: apps/chat-ui
+          script: npm install; npm run build
+        provision:
+          root_path: apps/chat-ui/dist
+          type: nodejs18x
       prod:
         build:
           root_path: apps/chat-ui
@@ -54,6 +67,19 @@ apps:
     type: web_api
     envs:
       dev:
+        build:
+          root_path: apps/chat-api
+          script: npm install
+        provision:
+          type: nodejs18x
+          root_path: apps/chat-api
+          start_command: node server.js
+          timeout: 120
+          vars:
+            - BAIDU_API_KEY
+            - BAIDU_SECRET_KEY
+            - STORE_SVC_API_KEY
+      uat:
         build:
           root_path: apps/chat-api
           script: npm install
@@ -84,6 +110,13 @@ services:
     type: kv_store
     envs:
       dev:
+        auths:
+          - apikey
+        provision:
+          type: kv_store_v1
+          namespaces:
+            - dailycounter
+      uat:
         auths:
           - apikey
         provision:
