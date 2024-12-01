@@ -27,11 +27,11 @@ auths:
       dev:
         in: header
         name: API-KEY
-        value: ${{vars.STORE_SVC_API_KEY}
+        value: ${{vars.STORE_SVC_API_KEY}}
       prod:
         in: header
         name: API-KEY
-        value: ${{vars.STORE_SVC_API_KEY}
+        value: ${{vars.STORE_SVC_API_KEY}}
 apps:
   chatui:
     type: web_frontend
