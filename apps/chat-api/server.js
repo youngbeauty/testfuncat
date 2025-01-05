@@ -14,16 +14,16 @@ const ALICLOUD_ACCESS_KEY_SECRET = process.env.ALICLOUD_ACCESS_KEY_SECRET;
 const SYSTEM_URL = process.env.FUNCTIONCAT_SYSTEM_URL;
 const STORE_SVC_API_KEY = process.env.STORE_SVC_API_KEY;
 const apiKey = process.env.GEMINI_API_KEY;
-const {
-  GoogleGenerativeAI,
-  HarmCategory,
-  HarmBlockThreshold,
-} = require("@google/generative-ai");
+// const {
+//   GoogleGenerativeAI,
+//   HarmCategory,
+//   HarmBlockThreshold,
+// } = require("@google/generative-ai");
 
-const genAI = new GoogleGenerativeAI(apiKey);
-const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
-});
+// const genAI = new GoogleGenerativeAI(apiKey);
+// const model = genAI.getGenerativeModel({
+//   model: "gemini-1.5-flash",
+// });
 
 let baiduAccessToken = null;
 let baiduTokenExpiry = null;
