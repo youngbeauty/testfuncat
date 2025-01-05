@@ -77,7 +77,7 @@ export default {
       model: null, // Ensure this is null or an invalid value initially
       models: [
         { provider: "baidu", name: "ernie-4.0-8k-latest" },
-        { provider: "Google", name: "gemini-1.5-flash" },
+        { provider: "baidu", name: "gemini-1.5-flash" },
         { provider: "Google", name: "gemini-1.5-flash" },
       ],
       conversations: [],
