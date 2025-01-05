@@ -1,9 +1,9 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const axios = require('axios');
-const cors = require('cors');
-require('dotenv').config();
-const crypto = require('crypto');
+const express = require("express");
+const bodyParser = require("body-parser");
+const axios = require("axios");
+const cors = require("cors");
+require("dotenv").config();
+const crypto = require("crypto");
 
 const app = express();
 const PORT = process.env.FUNCTIONCAT_RUNTIME_PORT || 3000;
@@ -13,6 +13,17 @@ const ALICLOUD_ACCESS_KEY_ID = process.env.ALICLOUD_ACCESS_KEY_ID;
 const ALICLOUD_ACCESS_KEY_SECRET = process.env.ALICLOUD_ACCESS_KEY_SECRET;
 const SYSTEM_URL = process.env.FUNCTIONCAT_SYSTEM_URL;
 const STORE_SVC_API_KEY = process.env.STORE_SVC_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY;
+const {
+  GoogleGenerativeAI,
+  HarmCategory,
+  HarmBlockThreshold,
+} = require("@google/generative-ai");
+
+const genAI = new GoogleGenerativeAI(apiKey);
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+});
 
 let baiduAccessToken = null;
 let baiduTokenExpiry = null;
@@ -20,37 +31,62 @@ let baiduTokenExpiry = null;
 app.use(cors());
 app.use(bodyParser.json());
 
+async function run(input) {
+  const chatSession = model.startChat({
+    generationConfig,
+    history: [],
+  });
+
+  const result = await chatSession.sendMessage(input);
+  console.log(result.response.text());
+}
+
 // Function to get access token from Baidu
 async function getBaiduAccessToken() {
   if (!baiduAccessToken || new Date() >= baiduTokenExpiry) {
-    const response = await axios.post(`https://aip.baidubce.com/oauth/2.0/token`, null, {
-      params: {
-        grant_type: 'client_credentials',
-        client_id: BAIDU_API_KEY,
-        client_secret: BAIDU_SECRET_KEY,
-      },
-    });
+    const response = await axios.post(
+      `https://aip.baidubce.com/oauth/2.0/token`,
+      null,
+      {
+        params: {
+          grant_type: "client_credentials",
+          client_id: BAIDU_API_KEY,
+          client_secret: BAIDU_SECRET_KEY,
+        },
+      }
+    );
     baiduAccessToken = response.data.access_token;
-    baiduTokenExpiry = new Date(new Date().getTime() + response.data.expires_in * 1000);
+    baiduTokenExpiry = new Date(
+      new Date().getTime() + response.data.expires_in * 1000
+    );
   }
   return baiduAccessToken;
 }
 
 // Function to get signature for Alibaba Cloud API requests
 function getAlibabaSignature(params, secret) {
-  const sortedParams = Object.keys(params).sort().map(key => `${key}=${encodeURIComponent(params[key])}`).join('&');
+  const sortedParams = Object.keys(params)
+    .sort()
+    .map((key) => `${key}=${encodeURIComponent(params[key])}`)
+    .join("&");
   const stringToSign = `POST&%2F&${encodeURIComponent(sortedParams)}`;
-  return crypto.createHmac('sha1', `${secret}&`).update(stringToSign).digest('base64');
+  return crypto
+    .createHmac("sha1", `${secret}&`)
+    .update(stringToSign)
+    .digest("base64");
 }
 
 // Function to get the current request count from the KV store
 async function getRequestCount(dateKey) {
   try {
-    const response = await axios.get(`${SYSTEM_URL}/svcs/store/namespaces/dailycounter/keys/${dateKey}`, {
-      headers: {
-        'API-KEY': STORE_SVC_API_KEY
+    const response = await axios.get(
+      `${SYSTEM_URL}/svcs/store/namespaces/dailycounter/keys/${dateKey}`,
+      {
+        headers: {
+          "API-KEY": STORE_SVC_API_KEY,
+        },
       }
-    });
+    );
     console.log("getRequestCount", response);
     return parseInt(response.data.data.value, 10);
   } catch (error) {
@@ -59,40 +95,44 @@ async function getRequestCount(dateKey) {
       console.log(`Key ${dateKey} not found, initializing count to 0.`);
       return 0; // Initialize count to 0 if key is not found
     }
-    console.error('获取请求计数时出错:', error);
+    console.error("获取请求计数时出错:", error);
     throw error; // Re-throw the error for other cases
   }
 }
 
 // Function to update the request count in the KV store
 async function updateRequestCount(dateKey, count) {
-  console.log("updateRequestCount", dateKey, count)
+  console.log("updateRequestCount", dateKey, count);
   try {
-    await axios.post(`${SYSTEM_URL}/svcs/store/namespaces/dailycounter/keys`, 
-      { key: dateKey, value: count.toString() },  // Include both key and value in the body
+    await axios.post(
+      `${SYSTEM_URL}/svcs/store/namespaces/dailycounter/keys`,
+      { key: dateKey, value: count.toString() }, // Include both key and value in the body
       {
         headers: {
-          'API-KEY': STORE_SVC_API_KEY
-        }
-      });
-      console.log("updateRequestCount succeeded")
+          "API-KEY": STORE_SVC_API_KEY,
+        },
+      }
+    );
+    console.log("updateRequestCount succeeded");
   } catch (error) {
-    console.error('更新请求计数时出错:', error);
+    console.error("更新请求计数时出错:", error);
   }
 }
 
 // Middleware to check and update request count
 async function rateLimitMiddleware(req, res, next) {
-  const today = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+  const today = new Date().toISOString().split("T")[0]; // Get current date in YYYY-MM-DD format
   const dateKey = `requests-${today}`; // Use date-specific key for daily tracking
 
   const currentCount = await getRequestCount(dateKey);
-  console.log("currentCount",dateKey, currentCount)
+  console.log("currentCount", dateKey, currentCount);
   const limit = 100;
   const remaining = limit - currentCount;
 
   if (remaining <= 0) {
-    return res.status(429).json({ message: '请求已超出每日限制', remaining: 0, total: limit });
+    return res
+      .status(429)
+      .json({ message: "请求已超出每日限制", remaining: 0, total: limit });
   }
 
   await updateRequestCount(dateKey, currentCount + 1);
@@ -100,24 +140,24 @@ async function rateLimitMiddleware(req, res, next) {
   next();
 }
 
-app.get('/', async (req, res) => {
+app.get("/", async (req, res) => {
   const timestamp = new Date().toISOString();
-  console.log("/ called", timestamp)
-  return res.json({ "message": "你好，我是chat-api", "timestamp": timestamp });
+  console.log("/ called", timestamp);
+  return res.json({ message: "你好，我是chat-api", timestamp: timestamp });
 });
 
-app.get('/v', async (req, res) => {
+app.get("/v", async (req, res) => {
   return res.json("版本: 1");
 });
 
-app.post('/chat', rateLimitMiddleware, async (req, res) => {
+app.post("/chat", rateLimitMiddleware, async (req, res) => {
   const { message, provider, model } = req.body;
-  console.log("chat message",message)
-  console.log("chat model",model)
+  console.log("chat message", message);
+  console.log("chat model", model);
   try {
     let ai_response;
 
-    if (provider === 'baidu') {
+    if (provider === "baidu") {
       const accessToken = await getBaiduAccessToken();
       const response = await axios.post(
         `https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/${model}?access_token=${accessToken}`,
@@ -128,47 +168,58 @@ app.post('/chat', rateLimitMiddleware, async (req, res) => {
           penalty_score: 1,
           disable_search: false,
           enable_citation: false,
-          collapsed: true
+          collapsed: true,
         },
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers: { "Content-Type": "application/json" } }
       );
 
       ai_response = response.data.result;
-
-    } else if (provider === 'alicloud') {
+    } else if (provider === "alicloud") {
       const params = {
-        Action: 'GetResponse',
-        Version: '2020-06-01',
-        RegionId: 'cn-hangzhou',
+        Action: "GetResponse",
+        Version: "2020-06-01",
+        RegionId: "cn-hangzhou",
         Text: message,
         ModelName: model,
         Timestamp: new Date().toISOString(),
-        Format: 'JSON',
-        SignatureMethod: 'HMAC-SHA1',
-        SignatureVersion: '1.0',
+        Format: "JSON",
+        SignatureMethod: "HMAC-SHA1",
+        SignatureVersion: "1.0",
         AccessKeyId: ALICLOUD_ACCESS_KEY_ID,
-        SignatureNonce: Math.random().toString(36).substring(2)
+        SignatureNonce: Math.random().toString(36).substring(2),
       };
 
-      params.Signature = getAlibabaSignature(params, ALICLOUD_ACCESS_KEY_SECRET);
+      params.Signature = getAlibabaSignature(
+        params,
+        ALICLOUD_ACCESS_KEY_SECRET
+      );
 
       const response = await axios.post(
-        'https://nlp.cn-hangzhou.aliyuncs.com/',
+        "https://nlp.cn-hangzhou.aliyuncs.com/",
         null,
         { params }
       );
 
       ai_response = response.data.Response;
+    } else if (provider === "Google") {
+      const chatSession = model.startChat({
+        generationConfig,
+        history: [],
+      });
 
+      ai_response = await chatSession.sendMessage(message);
     } else {
-      return res.status(400).send('指定的AI提供商无效');
+      return res.status(400).send("指定的AI提供商无效");
     }
 
-    res.json({ response: ai_response, remaining: req.rateLimitInfo.remaining, total: req.rateLimitInfo.total });
-
+    res.json({
+      response: ai_response,
+      remaining: req.rateLimitInfo.remaining,
+      total: req.rateLimitInfo.total,
+    });
   } catch (error) {
-    console.error('与AI提供商通信时出错:', error);
-    res.status(500).send('与AI提供商通信时出错');
+    console.error("与AI提供商通信时出错:", error);
+    res.status(500).send("与AI提供商通信时出错");
   }
 });
 
